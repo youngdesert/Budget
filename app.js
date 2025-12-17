@@ -31,40 +31,39 @@ mobileMenu?.querySelectorAll("a").forEach(a => {
   a.addEventListener("click", () => closeMenu());
 });
 
-const form = document.getElementById('form');
-const submitBtn = form.querySelector('button[type="submit"]');
+const previewForm = document.getElementById("previewForm");
+const previewStatus = document.getElementById("previewStatus");
+const previewBtn = document.getElementById("previewBtn");
 
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+previewForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const formData = new FormData(form);
-    formData.append("access_key", "fa0b695c-26ca-4ab5-9189-90697343f424");
+  previewStatus.textContent = "Sending...";
+  previewBtn.disabled = true;
 
-    const originalText = submitBtn.textContent;
+  try {
+    const formData = new FormData(previewForm);
 
-    submitBtn.textContent = "Sending...";
-    submitBtn.disabled = true;
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData
+    });
 
-    try {
-        const response = await fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            body: formData
-        });
+    const data = await res.json();
 
-        const data = await response.json();
-
-        if (response.ok) {
-            alert("Success! Your message has been sent.");
-            form.reset();
-        } else {
-            alert("Error: " + data.message);
-        }
-
-    } catch (error) {
-        alert("Something went wrong. Please try again.");
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+    if (data.success) {
+      previewStatus.textContent = "✅ Sent! Check your email soon for the preview.";
+      previewForm.reset();
+    } else {
+      previewStatus.textContent = "❌ Something went wrong. Try again in a moment.";
+      console.error("Web3Forms error:", data);
     }
+  } catch (err) {
+    previewStatus.textContent = "❌ Network error. Please try again.";
+    console.error(err);
+  } finally {
+    previewBtn.disabled = false;
+  }
 });
+
 });
