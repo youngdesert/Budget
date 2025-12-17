@@ -212,14 +212,26 @@
           <h2>Preview the first pages</h2>
           <p>Give your readers a taste (and capture emails).</p>
 
-          <form class="form">
-            <label>
-              Email
-              <input type="email" placeholder="you@email.com" required />
-            </label>
-            <button class="btn btn-primary" type="submit">Send preview</button>
-            <p class="fine">No spam. Just the preview + launch updates.</p>
-          </form>
+<form class="form" id="previewForm">
+  <label>
+    Email
+    <input type="email" name="email" placeholder="you@email.com" required />
+  </label>
+
+  <!-- Web3Forms required fields -->
+  <input type="hidden" name="access_key" value="3a7e0042-9451-4644-bf29-1d9806ff8254" />
+  <input type="hidden" name="subject" value="YoungDesert Preview Request" />
+  <input type="hidden" name="from_name" value="YoungDesert Landing Page" />
+
+  <!-- Optional anti-spam -->
+  <input type="checkbox" name="botcheck" class="hidden" style="display:none;">
+
+  <button class="btn btn-primary" type="submit" id="previewBtn">Send preview</button>
+
+  <!-- Status message -->
+  <p class="fine" id="previewStatus">No spam. Just the preview + launch updates.</p>
+</form>
+
         </div>
 
         <div class="quote-card">
