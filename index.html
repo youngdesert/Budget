@@ -149,12 +149,6 @@
         <p id="totalExpense" class="text-red-600">Expenses: $0</p>
         <p id="totalInvestment" class="text-blue-600">Investments: $0</p>
         <p id="totalDebt" class="text-yellow-600">Debts: $0</p>
-
-        <!-- ✅ NEW: Net Monthly Cashflow after all allocations -->
-        <p id="netCashflow" class="font-bold text-emerald-700 dark:text-emerald-400">
-          Net Monthly Cashflow (after all): $0
-        </p>
-
         <p id="netWorth" class="font-bold text-gray-900 dark:text-gray-100">Net Worth: $0</p>
 
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -185,23 +179,24 @@
         </table>
       </section>
 
-      <!-- Monthly Overview -->
-      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
-        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📈 Overview (This Month)</h2>
-        <div class="chart-box">
-          <canvas id="financeChart"></canvas>
-        </div>
-      </section>
+<!-- Monthly Overview -->
+<section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
+  <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📈 Overview (This Month)</h2>
+  <div class="chart-box">
+    <canvas id="financeChart"></canvas>
+  </div>
+</section>
 
-      <!-- Yearly Overview -->
-      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
-        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">
-          📆 Yearly Overview (<span id="yearLabel"></span>)
-        </h2>
-        <div class="chart-box">
-          <canvas id="yearChart"></canvas>
-        </div>
-      </section>
+<!-- Yearly Overview -->
+<section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
+  <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">
+    📆 Yearly Overview (<span id="yearLabel"></span>)
+  </h2>
+  <div class="chart-box">
+    <canvas id="yearChart"></canvas>
+  </div>
+</section>
+
 
     </div>
   </div>
@@ -231,7 +226,6 @@
     const totalExpense = document.getElementById("totalExpense");
     const totalInvestment = document.getElementById("totalInvestment");
     const totalDebt = document.getElementById("totalDebt");
-    const netCashflow = document.getElementById("netCashflow"); // ✅ NEW
     const netWorth = document.getElementById("netWorth");
     const payResultGross = document.getElementById("payResultGross");
     const payResultNet = document.getElementById("payResultNet");
@@ -305,7 +299,7 @@
         if (!copy.month) { copy.month = fallbackMonth; changed = true; }
         if (!copy.year)  { copy.year  = fallbackYear;  changed = true; }
 
-        // Optional: if old data had 2024, bump it to 2025 so it still shows
+        // Optional: if old data had 2024, bump it to 2025 so it still shows (keeps “no 2024 in view” promise)
         if (parseInt(copy.year) === 2024) { copy.year = 2025; changed = true; }
 
         return copy;
@@ -354,18 +348,6 @@
       totalExpense.textContent    = "Expenses: "    + fmt(expense);
       totalInvestment.textContent = "Investments: " + fmt(investment);
       totalDebt.textContent       = "Debts: "       + fmt(debt);
-
-      // ✅ NEW: Net Monthly Cashflow (after all allocations)
-      // Definition: Income − Expenses − Debts − Investments
-      const cashflowAfterAll = income - expense - debt - investment;
-      netCashflow.textContent = "Net Monthly Cashflow (after all): " + fmt(cashflowAfterAll);
-
-      // Optional: color feedback (green if >=0, red if negative)
-      if (cashflowAfterAll < 0) {
-        netCashflow.className = "font-bold text-red-600 dark:text-red-400";
-      } else {
-        netCashflow.className = "font-bold text-emerald-700 dark:text-emerald-400";
-      }
 
       const net = investmentsReduceNW ? (income - expense - debt - investment)
                                       : (income - expense - debt + investment);
@@ -438,31 +420,21 @@
         expense: document.getElementById('totalExpense').textContent.replace('Expenses: ',''),
         investment: document.getElementById('totalInvestment').textContent.replace('Investments: ',''),
         debt: document.getElementById('totalDebt').textContent.replace('Debts: ',''),
-        cashflow: document.getElementById('netCashflow').textContent.replace('Net Monthly Cashflow (after all): ',''),
         net: document.getElementById('netWorth').textContent.replace('Net Worth: ','')
       };
 
       doc.setDrawColor(220);
-
-      // Increased height to fit the extra line (cashflow)
-      doc.roundedRect(margin, y, pageWidth - margin*2, 88, 6, 6);
-
+      doc.roundedRect(margin, y, pageWidth - margin*2, 70, 6, 6);
       doc.setFontSize(11);
       doc.text(`Income: ${totals.income}`, margin+12, y+22);
       doc.text(`Expenses: ${totals.expense}`, margin+220, y+22);
       doc.text(`Investments: ${totals.investment}`, margin+12, y+44);
       doc.text(`Debts: ${totals.debt}`, margin+220, y+44);
-
-      doc.setTextColor(16, 185, 129);
-      doc.text(`Net Cashflow (after all): ${totals.cashflow}`, margin+12, y+66);
-      doc.setTextColor(20,20,20);
-
       doc.setFontSize(12);
       doc.setTextColor(37,99,235);
-      doc.text(`Net Worth: ${totals.net}` + (JSON.parse(localStorage.getItem("investmentsReduceNW") || "true") ? '  (investments reduce NW)' : ''), margin+12, y+86);
+      doc.text(`Net Worth: ${totals.net}` + (JSON.parse(localStorage.getItem("investmentsReduceNW") || "true") ? '  (investments reduce NW)' : ''), margin+12, y+66);
       doc.setTextColor(20,20,20);
-
-      y += 108;
+      y += 90;
 
       const doughnutImg = financeChart.toBase64Image();
       const barImg = totalsBarChart.toBase64Image();
