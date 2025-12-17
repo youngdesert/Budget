@@ -31,11 +31,39 @@ mobileMenu?.querySelectorAll("a").forEach(a => {
   a.addEventListener("click", () => closeMenu());
 });
 
-// Fake preview form submit (hook to your email provider later)
-document.querySelectorAll(".form").forEach(form => {
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    alert("Preview request received! Connect this to your email service next.");
-    form.reset();
-  });
+const previewForm = document.getElementById("previewForm");
+const previewStatus = document.getElementById("previewStatus");
+const previewBtn = document.getElementById("previewBtn");
+
+previewForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  previewStatus.textContent = "Sending...";
+  previewBtn.disabled = true;
+
+  try {
+    const formData = new FormData(previewForm);
+
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      previewStatus.textContent = "✅ Sent! Check your email soon for the preview.";
+      previewForm.reset();
+    } else {
+      previewStatus.textContent = "❌ Something went wrong. Try again in a moment.";
+      console.error("Web3Forms error:", data);
+    }
+  } catch (err) {
+    previewStatus.textContent = "❌ Network error. Please try again.";
+    console.error(err);
+  } finally {
+    previewBtn.disabled = false;
+  }
+});
+
 });
