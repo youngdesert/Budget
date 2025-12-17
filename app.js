@@ -31,39 +31,40 @@ mobileMenu?.querySelectorAll("a").forEach(a => {
   a.addEventListener("click", () => closeMenu());
 });
 
-const previewForm = document.getElementById("previewForm");
-const previewStatus = document.getElementById("previewStatus");
-const previewBtn = document.getElementById("previewBtn");
+const form = document.getElementById('form');
+const submitBtn = form.querySelector('button[type="submit"]');
 
-previewForm?.addEventListener("submit", async (e) => {
-  e.preventDefault();
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  previewStatus.textContent = "Sending...";
-  previewBtn.disabled = true;
+    const formData = new FormData(form);
+    formData.append("access_key", "fa0b695c-26ca-4ab5-9189-90697343f424");
 
-  try {
-    const formData = new FormData(previewForm);
+    const originalText = submitBtn.textContent;
 
-    const res = await fetch("https://api.web3forms.com/submit", {
-      method: "POST",
-      body: formData
-    });
+    submitBtn.textContent = "Sending...";
+    submitBtn.disabled = true;
 
-    const data = await res.json();
+    try {
+        const response = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            body: formData
+        });
 
-    if (data.success) {
-      previewStatus.textContent = "✅ Sent! Check your email soon for the preview.";
-      previewForm.reset();
-    } else {
-      previewStatus.textContent = "❌ Something went wrong. Try again in a moment.";
-      console.error("Web3Forms error:", data);
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Success! Your message has been sent.");
+            form.reset();
+        } else {
+            alert("Error: " + data.message);
+        }
+
+    } catch (error) {
+        alert("Something went wrong. Please try again.");
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
-  } catch (err) {
-    previewStatus.textContent = "❌ Network error. Please try again.";
-    console.error(err);
-  } finally {
-    previewBtn.disabled = false;
-  }
 });
-
 });
