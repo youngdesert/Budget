@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Budget & Finance Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+
+    /* Charts sizing */
+    .chart-box { height: 14rem; }
+    @media (min-width: 640px){ .chart-box { height: 18rem; } }
+    @media (min-width: 768px){ .chart-box { height: 20rem; } }
+    .chart-box--mini { height: 8rem; }
+    @media (min-width: 640px){ .chart-box--mini { height: 9rem; } }
+
+    /* Sticky table header */
+    .table-wrap thead th { position: sticky; top: 0; z-index: 1; }
+
+    /* Momentum scroll on iOS */
+    .scroll-x { -webkit-overflow-scrolling: touch; }
+
+    /* ---- Mobile card slider ---- */
+    .card-rail { scroll-snap-type: x mandatory; }
+    .card-slide { scroll-snap-align: start; }
+    .card-rail::-webkit-scrollbar { height: 8px; }
+    .card-rail::-webkit-scrollbar-thumb { border-radius: 999px; }
+
+    /* On very small screens, make cards fit nicely */
+    @media (max-width: 767px){
+      .card-slide { width: 92vw; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-neutral-900 min-h-screen p-3 sm:p-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-4 sm:mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-900 dark:text-gray-100">
+        💰 Budget & Finance Tracker
+      </h1>
+      <p class="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 md:hidden">
+        Swipe ← / → to move between cards
+      </p>
+    </div>
+
+    <!-- CARD RAIL (mobile = horizontal slider, md+ = normal vertical layout) -->
+    <div class="card-rail flex gap-4 overflow-x-auto pb-3 scroll-x
+                md:block md:overflow-visible md:space-y-6 md:pb-0">
+
+      <!-- VIEW FILTERS -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📅 View</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select id="viewMonth" class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100"></select>
+          <select id="viewYear" class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100"></select>
+          <button id="downloadBtn" type="button" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-2 w-full">
+            ⬇️ Download Monthly Report
+          </button>
+        </div>
+      </section>
+
+      <!-- Calculator -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">🧮 Paycheck Calculator</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input type="number" step="any" id="hourlyRate" placeholder="Hourly Pay ($)"
+            class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100" />
+          <input type="number" step="any" id="hoursWeek" placeholder="Hours per Week"
+            class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100" />
+          <input type="number" step="any" id="weeksMonth" placeholder="Weeks per Month" value="4"
+            class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <select id="state" class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100">
+            <option value="TN">Tennessee</option>
+            <option value="CA">California</option>
+            <option value="TX">Texas</option>
+            <option value="NY">New York</option>
+          </select>
+          <select id="status" class="border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100">
+            <option value="single">Single</option>
+            <option value="married">Married</option>
+          </select>
+          <button id="calcBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white rounded-lg p-2 w-full">
+            Calculate
+          </button>
+        </div>
+
+        <div class="mt-3 text-sm sm:text-base">
+          <p id="payResultGross" class="font-semibold text-blue-600">Gross Monthly Pay: $0</p>
+          <p id="payResultNet" class="font-semibold text-green-600">Net Monthly Pay (after tax): $0</p>
+        </div>
+      </section>
+
+      <!-- Add Transaction -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">➕ Add Transaction</h2>
+        <form id="transactionForm" class="space-y-3" autocomplete="off">
+          <label class="block text-sm text-gray-700 dark:text-gray-300">Description
+            <input type="text" id="desc" placeholder="e.g. Rent, Groceries, 401k"
+              class="mt-1 border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100" required />
+          </label>
+
+          <label class="block text-sm text-gray-700 dark:text-gray-300">Amount
+            <input type="number" step="any" id="amount" placeholder="e.g. 1200"
+              class="mt-1 border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100" required />
+          </label>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block text-sm text-gray-700 dark:text-gray-300">Type
+              <select id="type" class="mt-1 border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+                <option value="investment">Investment</option>
+                <option value="debt">Debt</option>
+              </select>
+            </label>
+            <label class="block text-sm text-gray-700 dark:text-gray-300">Month
+              <select id="month" class="mt-1 border rounded-lg p-2 w-full bg-white dark:bg-neutral-900 dark:border-neutral-700 text-gray-900 dark:text-gray-100"></select>
+            </label>
+          </div>
+
+          <button class="bg-blue-600 hover:bg-blue-700 text-white w-full rounded-lg p-2" aria-label="Add Transaction">
+            Add
+          </button>
+        </form>
+      </section>
+
+      <!-- Totals -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm space-y-2">
+        <h2 class="font-semibold mb-2 text-gray-900 dark:text-gray-100">📊 Totals (Monthly)</h2>
+        <p id="totalIncome" class="text-green-600">Income: $0</p>
+        <p id="totalExpense" class="text-red-600">Expenses: $0</p>
+        <p id="totalInvestment" class="text-blue-600">Investments: $0</p>
+        <p id="totalDebt" class="text-yellow-600">Debts: $0</p>
+        <p id="netWorth" class="font-bold text-gray-900 dark:text-gray-100">Net Worth: $0</p>
+
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" id="investmentsReduceNW" class="rounded">
+          Treat investment contributions as expense (reduce net worth)
+        </label>
+
+        <div class="chart-box--mini">
+          <canvas id="totalsBarChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm table-wrap overflow-x-auto scroll-x">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📋 Transactions (This View)</h2>
+        <table class="w-full min-w-[640px] text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-neutral-700 text-gray-900 dark:text-gray-100">
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Description</th>
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Amount</th>
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Type</th>
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Month</th>
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Year</th>
+              <th class="p-2 border border-gray-200 dark:border-neutral-700 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody id="transactionTable" class="align-top"></tbody>
+        </table>
+      </section>
+
+      <!-- Monthly Overview -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📈 Overview (This Month)</h2>
+        <div class="chart-box">
+          <canvas id="financeChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Yearly Overview -->
+      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">
+          📆 Yearly Overview (<span id="yearLabel"></span>)
+        </h2>
+        <div class="chart-box">
+          <canvas id="yearChart"></canvas>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    // ---------- Helpers ----------
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const fmt = n => "$" + Number(n || 0).toFixed(2);
+
+    // ✅ Only allow these years in the View
+    const YEAR_RANGE = [2025, 2026, 2027];
+
+    // ---------- State ----------
+    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+    const now = new Date();
+    let selectedMonth = parseInt(localStorage.getItem("selectedMonth")) || (now.getMonth() + 1);
+    let selectedYear  = parseInt(localStorage.getItem("selectedYear"))  || now.getFullYear();
+    let investmentsReduceNW = JSON.parse(localStorage.getItem("investmentsReduceNW") || "true");
+
+    // If stored year is outside 2025–2027, snap to 2025
+    if (!YEAR_RANGE.includes(selectedYear)) selectedYear = YEAR_RANGE[0];
+
+    // ---------- Elements ----------
+    const form = document.getElementById("transactionForm");
+    const table = document.getElementById("transactionTable");
+    const totalIncome = document.getElementById("totalIncome");
+    const totalExpense = document.getElementById("totalExpense");
+    const totalInvestment = document.getElementById("totalInvestment");
+    const totalDebt = document.getElementById("totalDebt");
+    const netWorth = document.getElementById("netWorth");
+    const payResultGross = document.getElementById("payResultGross");
+    const payResultNet = document.getElementById("payResultNet");
+    const viewMonthSel = document.getElementById("viewMonth");
+    const viewYearSel = document.getElementById("viewYear");
+    const formMonthSel = document.getElementById("month");
+    const yearLabel = document.getElementById("yearLabel");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const calcBtn = document.getElementById("calcBtn");
+    const investmentsReduceNWCheckbox = document.getElementById("investmentsReduceNW");
+
+    // ---------- Charts ----------
+    const doughnutCtx = document.getElementById("financeChart").getContext("2d");
+    let financeChart = new Chart(doughnutCtx, {
+      type: "doughnut",
+      data: { labels: ["Income", "Expenses", "Investments", "Debts"], datasets: [{ data: [0, 0, 0, 0] }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+    });
+
+    const barCtx = document.getElementById("totalsBarChart").getContext("2d");
+    let totalsBarChart = new Chart(barCtx, {
+      type: "bar",
+      data: { labels: ["Income", "Expenses", "Investments", "Debts"], datasets: [{ label: "Totals ($)", data: [0, 0, 0, 0] }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    const yearCtx = document.getElementById("yearChart").getContext("2d");
+    let yearChart = new Chart(yearCtx, {
+      type: "bar",
+      data: {
+        labels: MONTHS,
+        datasets: [
+          { label: "Income",      data: Array(12).fill(0) },
+          { label: "Expenses",    data: Array(12).fill(0) },
+          { label: "Investments", data: Array(12).fill(0) },
+          { label: "Debts",       data: Array(12).fill(0) }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "top" } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // ---------- UI Setup ----------
+    function populateMonthSelect(selEl) {
+      selEl.innerHTML = MONTHS.map((m, i) => `<option value="${i+1}">${m}</option>`).join("");
+    }
+
+    // ✅ Fixed years only: 2025–2027 (no 2024)
+    function populateYearSelect() {
+      viewYearSel.innerHTML = YEAR_RANGE.map(y => `<option value="${y}">${y}</option>`).join("");
+    }
+
+    // ---------- Data Migration ----------
+    function migrateTransactions() {
+      let changed = false;
+      const fallbackMonth = selectedMonth;
+      const fallbackYear  = selectedYear;
+
+      transactions = transactions.map(t => {
+        const copy = { ...t };
+        if (typeof copy.amount === "string") { copy.amount = parseFloat(copy.amount) || 0; changed = true; }
+        if (!copy.month) { copy.month = fallbackMonth; changed = true; }
+        if (!copy.year)  { copy.year  = fallbackYear;  changed = true; }
+
+        // Optional: if old data had 2024, bump it to 2025 so it still shows (keeps “no 2024 in view” promise)
+        if (parseInt(copy.year) === 2024) { copy.year = 2025; changed = true; }
+
+        return copy;
+      });
+
+      if (changed) localStorage.setItem("transactions", JSON.stringify(transactions));
+    }
+
+    // ---------- Rendering ----------
+    function render() {
+      viewMonthSel.value = String(selectedMonth);
+      formMonthSel.value = String(selectedMonth);
+      viewYearSel.value = String(selectedYear);
+      yearLabel.textContent = selectedYear;
+
+      const filtered = transactions.filter(t =>
+        parseInt(t.month) === selectedMonth && parseInt(t.year) === selectedYear
+      );
+
+      let income = 0, expense = 0, investment = 0, debt = 0;
+      table.innerHTML = "";
+
+      filtered.forEach((t) => {
+        const amt = Number(t.amount) || 0;
+        if (t.type === "income") income += amt;
+        if (t.type === "expense") expense += amt;
+        if (t.type === "investment") investment += amt;
+        if (t.type === "debt") debt += amt;
+
+        const idx = transactions.indexOf(t);
+        table.insertAdjacentHTML("beforeend", `
+          <tr class="odd:bg-white even:bg-gray-50 dark:odd:bg-neutral-800 dark:even:bg-neutral-900">
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">${t.desc}</td>
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">${fmt(amt)}</td>
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">${t.type}</td>
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">${MONTHS[(parseInt(t.month)||1)-1]}</td>
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">${t.year}</td>
+            <td class="p-2 border border-gray-200 dark:border-neutral-700">
+              <button onclick="removeTransaction(${idx})" class="text-red-600 hover:underline">❌ Remove</button>
+            </td>
+          </tr>
+        `);
+      });
+
+      totalIncome.textContent     = "Income: "      + fmt(income);
+      totalExpense.textContent    = "Expenses: "    + fmt(expense);
+      totalInvestment.textContent = "Investments: " + fmt(investment);
+      totalDebt.textContent       = "Debts: "       + fmt(debt);
+
+      const net = investmentsReduceNW ? (income - expense - debt - investment)
+                                      : (income - expense - debt + investment);
+      netWorth.textContent = "Net Worth: " + fmt(net);
+
+      financeChart.data.datasets[0].data = [income, expense, investment, debt];
+      financeChart.update();
+
+      totalsBarChart.data.datasets[0].data = [income, expense, investment, debt];
+      totalsBarChart.update();
+
+      const inc = Array(12).fill(0), exp = Array(12).fill(0), inv = Array(12).fill(0), deb = Array(12).fill(0);
+      transactions.forEach(t => {
+        if (parseInt(t.year) !== selectedYear) return;
+        const m = (parseInt(t.month) || 1) - 1;
+        const amt = Number(t.amount) || 0;
+        if (t.type === "income") inc[m] += amt;
+        if (t.type === "expense") exp[m] += amt;
+        if (t.type === "investment") inv[m] += amt;
+        if (t.type === "debt") deb[m] += amt;
+      });
+
+      yearChart.data.datasets[0].data = inc;
+      yearChart.data.datasets[1].data = exp;
+      yearChart.data.datasets[2].data = inv;
+      yearChart.data.datasets[3].data = deb;
+      yearChart.update();
+
+      localStorage.setItem("selectedMonth", String(selectedMonth));
+      localStorage.setItem("selectedYear", String(selectedYear));
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+    }
+
+    // ---------- Utils to load libs on demand ----------
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    // ---------- Build styled PDF ----------
+    async function downloadPDF() {
+      await loadScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+      await loadScript("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 40; let y = margin;
+
+      doc.setFillColor(37, 99, 235);
+      doc.rect(0, 0, pageWidth, 64, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(18);
+      doc.text('Budget & Finance Report', margin, 40);
+
+      doc.setTextColor(20,20,20);
+      doc.setFontSize(12);
+      y = 84;
+      doc.text(`${MONTHS[selectedMonth-1]} ${selectedYear}`, margin, y);
+      y += 16;
+
+      const totals = {
+        income: document.getElementById('totalIncome').textContent.replace('Income: ',''),
+        expense: document.getElementById('totalExpense').textContent.replace('Expenses: ',''),
+        investment: document.getElementById('totalInvestment').textContent.replace('Investments: ',''),
+        debt: document.getElementById('totalDebt').textContent.replace('Debts: ',''),
+        net: document.getElementById('netWorth').textContent.replace('Net Worth: ','')
+      };
+
+      doc.setDrawColor(220);
+      doc.roundedRect(margin, y, pageWidth - margin*2, 70, 6, 6);
+      doc.setFontSize(11);
+      doc.text(`Income: ${totals.income}`, margin+12, y+22);
+      doc.text(`Expenses: ${totals.expense}`, margin+220, y+22);
+      doc.text(`Investments: ${totals.investment}`, margin+12, y+44);
+      doc.text(`Debts: ${totals.debt}`, margin+220, y+44);
+      doc.setFontSize(12);
+      doc.setTextColor(37,99,235);
+      doc.text(`Net Worth: ${totals.net}` + (JSON.parse(localStorage.getItem("investmentsReduceNW") || "true") ? '  (investments reduce NW)' : ''), margin+12, y+66);
+      doc.setTextColor(20,20,20);
+      y += 90;
+
+      const doughnutImg = financeChart.toBase64Image();
+      const barImg = totalsBarChart.toBase64Image();
+      const yearImg = yearChart.toBase64Image();
+      const imgW = (pageWidth - margin*3) / 2;
+      const imgH = 140;
+
+      doc.setFontSize(13);
+      doc.text('Monthly Overview', margin, y-6);
+      doc.addImage(doughnutImg, 'PNG', margin, y, imgW, imgH, undefined, 'FAST');
+      doc.addImage(barImg, 'PNG', margin*2 + imgW, y, imgW, imgH, undefined, 'FAST');
+      y += imgH + 24;
+
+      doc.text('Yearly Overview', margin, y-6);
+      doc.addImage(yearImg, 'PNG', margin, y, pageWidth - margin*2, 150, undefined, 'FAST');
+      y += 170;
+
+      const filtered = transactions.filter(t => parseInt(t.month) === selectedMonth && parseInt(t.year) === selectedYear);
+      const body = filtered.map(t => [t.desc, Number(t.amount)||0, t.type, MONTHS[(parseInt(t.month)||1)-1], t.year]);
+
+      doc.autoTable({
+        startY: y,
+        head: [['Description','Amount','Type','Month','Year']],
+        body,
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [37,99,235], textColor: 255 },
+        alternateRowStyles: { fillColor: [245,245,245] },
+        columnStyles: { 1: { halign: 'right' } },
+        didDrawPage: () => {
+          const str = `Page ${doc.internal.getNumberOfPages()}`;
+          doc.setFontSize(9); doc.setTextColor(120);
+          doc.text(str, pageWidth - margin, pageHeight - 10, { align: 'right' });
+        }
+      });
+
+      doc.save(`budget_report_${selectedYear}-${String(selectedMonth).padStart(2,'0')}.pdf`);
+    }
+
+    // ---------- Events ----------
+    viewMonthSel.addEventListener("change", e => {
+      selectedMonth = parseInt(e.target.value);
+      formMonthSel.value = String(selectedMonth);
+      render();
+    });
+
+    viewYearSel.addEventListener("change", e => {
+      selectedYear = parseInt(e.target.value);
+      render();
+    });
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const desc = document.getElementById("desc").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
+      const type = document.getElementById("type").value;
+      const month = parseInt(document.getElementById("month").value) || selectedMonth;
+      const year = selectedYear;
+      if (!desc || isNaN(amount)) return;
+
+      transactions.push({ desc, amount, type, month, year });
+      form.reset();
+      formMonthSel.value = String(selectedMonth);
+      render();
+    });
+
+    window.removeTransaction = function(i) {
+      if (i >= 0 && i < transactions.length) {
+        transactions.splice(i, 1);
+        render();
+      }
+    };
+
+    downloadBtn.addEventListener("click", downloadPDF);
+
+    // Calculator
+    calcBtn.addEventListener("click", calculatePay);
+    function calculatePay() {
+      const taxRates = { TN:{single:0.15,married:0.12}, CA:{single:0.25,married:0.20}, TX:{single:0.18,married:0.15}, NY:{single:0.27,married:0.22} };
+      const rate = parseFloat(document.getElementById("hourlyRate").value) || 0;
+      const hours = parseFloat(document.getElementById("hoursWeek").value) || 0;
+      const weeks = parseFloat(document.getElementById("weeksMonth").value) || 4;
+      const state = document.getElementById("state").value;
+      const status = document.getElementById("status").value;
+      const gross = rate * hours * weeks;
+      const taxRate = (taxRates[state] && taxRates[state][status]) ?? 0.20;
+      const net = gross * (1 - taxRate);
+      payResultGross.textContent = "Gross Monthly Pay: " + fmt(gross);
+      payResultNet.textContent = "Net Monthly Pay (after tax): " + fmt(net);
+    }
+
+    // ---------- Init ----------
+    (function init(){
+      migrateTransactions();
+      populateMonthSelect(viewMonthSel);
+      populateMonthSelect(formMonthSel);
+      populateYearSelect();
+
+      viewMonthSel.value = String(selectedMonth);
+      formMonthSel.value = String(selectedMonth);
+      viewYearSel.value = String(selectedYear);
+
+      investmentsReduceNWCheckbox.checked = investmentsReduceNW;
+      investmentsReduceNWCheckbox.addEventListener("change", (e) => {
+        investmentsReduceNW = e.target.checked;
+        localStorage.setItem("investmentsReduceNW", JSON.stringify(investmentsReduceNW));
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
