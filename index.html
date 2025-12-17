@@ -10,9 +10,20 @@
     :root { color-scheme: light dark; }
 
     /* Charts sizing */
-    .chart-box { height: 14rem; }
-    @media (min-width: 640px){ .chart-box { height: 18rem; } }
-    @media (min-width: 768px){ .chart-box { height: 20rem; } }
+/* Charts sizing (mobile fills the card) */
+.chart-box { height: 14rem; }
+
+/* ✅ On small screens, let the chart fill the remaining space in the card */
+@media (max-width: 767px){
+  .chart-box {
+    height: auto;
+    flex: 1;          /* take remaining space */
+    min-height: 16rem; /* still keep a minimum */
+  }
+}
+@media (min-width: 640px){ .chart-box { height: 18rem; } }
+@media (min-width: 768px){ .chart-box { height: 20rem; } }
+
     .chart-box--mini { height: 8rem; }
     @media (min-width: 640px){ .chart-box--mini { height: 9rem; } }
 
@@ -168,23 +179,24 @@
         </table>
       </section>
 
-      <!-- Monthly Overview -->
-      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
-        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📈 Overview (This Month)</h2>
-        <div class="chart-box">
-          <canvas id="financeChart"></canvas>
-        </div>
-      </section>
+<!-- Monthly Overview -->
+<section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
+  <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">📈 Overview (This Month)</h2>
+  <div class="chart-box">
+    <canvas id="financeChart"></canvas>
+  </div>
+</section>
 
-      <!-- Yearly Overview -->
-      <section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm">
-        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">
-          📆 Yearly Overview (<span id="yearLabel"></span>)
-        </h2>
-        <div class="chart-box">
-          <canvas id="yearChart"></canvas>
-        </div>
-      </section>
+<!-- Yearly Overview -->
+<section class="card-slide shrink-0 md:shrink bg-white dark:bg-neutral-800 p-4 rounded-2xl shadow-sm flex flex-col">
+  <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-100">
+    📆 Yearly Overview (<span id="yearLabel"></span>)
+  </h2>
+  <div class="chart-box">
+    <canvas id="yearChart"></canvas>
+  </div>
+</section>
+
 
     </div>
   </div>
